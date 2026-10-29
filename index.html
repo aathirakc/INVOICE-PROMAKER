@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Invoice & Quotation Manager</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">Invoice<span>Pro</span></div>
+    <button data-page="dashboard" class="nav active">Dashboard</button>
+    <button data-page="invoice" class="nav">Create Proforma Invoice</button>
+    <button data-page="quotation" class="nav">Create Quotation</button>
+    <button data-page="products" class="nav">Products</button>
+    <button data-page="files" class="nav">Saved Invoices / Quotations</button>
+    <button data-page="settings" class="nav">Company Settings</button>
+  </aside>
+  <main class="main">
+    <header><h1 id="pageTitle">Dashboard</h1></header>
+
+    <section id="dashboard" class="page active">
+      <div class="hero-card">
+        <div>
+          <div class="eyebrow">Invoice & Quotation Manager</div>
+          <h2>Manage products, invoices and quotations in one place.</h2>
+          <p id="dashboardSummary">Create professional documents, save them for future use, edit details later, and track pending and approved records.</p>
+          <div class="actions dashboard-actions">
+            <button class="primary" onclick="goToPage('invoice')">Create Proforma Invoice</button>
+            <button class="secondary" onclick="goToPage('quotation')">Create Quotation</button>
+          </div>
+        </div>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-card clickable-stat" role="button" tabindex="0" aria-label="View all documents" onclick="openStatusFiles('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStatusFiles('all')}"><span>Total Created</span><strong id="statTotal">0</strong><small>Click to view all documents</small></div>
+        <div class="stat-card pending-stat clickable-stat" role="button" tabindex="0" aria-label="View pending documents" onclick="openStatusFiles('pending')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStatusFiles('pending')}"><span>Pending</span><strong id="statPending">0</strong><small>Click to view pending documents</small></div>
+        <div class="stat-card approved-stat clickable-stat" role="button" tabindex="0" aria-label="View approved documents" onclick="openStatusFiles('approved')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openStatusFiles('approved')}"><span>Approved</span><strong id="statApproved">0</strong><small>Click to view approved documents</small></div>
+        <div class="stat-card clickable-stat" role="button" tabindex="0" aria-label="View saved products" onclick="goToPage('products')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goToPage('products')}"><span>Saved Products</span><strong id="statProducts">0</strong><small>Click to view saved products</small></div>
+      </div>
+      <div class="card">
+        <h2>Recent Documents</h2>
+        <div id="recentFiles"></div>
+      </div>
+    </section>
+
+    <section id="invoice" class="page">
+      <div class="card">
+        <div class="grid four">
+          <label>PI Number<input id="invoiceNo" readonly></label>
+          <label>Date<input id="invoiceDate" type="date" required></label>
+          <label>Customer Name<input id="invoiceCustomer" required maxlength="150" autocomplete="name"></label>
+          <label>Phone Number<input id="invoicePhone" type="tel" inputmode="tel" maxlength="20" pattern="[+()0-9 .-]{7,20}" title="Enter a valid phone number (7–20 characters)."></label>
+        </div>
+        <div class="grid two">
+          <label>Address<textarea id="invoiceAddress"></textarea></label>
+          <label>Sales Person Name<input id="invoiceSales"></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="product-add">
+          <input id="invoiceSearch" placeholder="Search product by name or code">
+          <select id="invoiceProduct" onchange="syncSelectedPrice('invoice')"></select>
+          <input id="invoicePrice" class="selected-price" type="number" min="0" step="0.01" placeholder="Price / Discount Price">
+          <button class="primary" onclick="addLine('invoice')">+ Add Product</button>
+        </div>
+        <div id="invoiceLines"></div>
+        <div id="invoiceTotals" class="totals"></div>
+      </div>
+      <div class="card pdf-layout-choice">
+        <h2>PDF Layout</h2>
+        <label>Choose company layout
+          <select id="invoicePdfLayout" onchange="handlePdfLayoutChange('invoice')">
+            <option value="jimco">JIMCO EXIM — Default Layout</option>
+            <option value="prime">PRIME SOLUTIONS</option>
+            <option value="kannur">KANNUR SAFETY</option>
+          </select>
+        </label>
+        <p class="layout-help">Select the company layout before generating the PDF.</p>
+        <div class="custom-layout-upload">
+          <label for="invoicePdfLayoutUpload">Add another layout from gallery</label>
+          <input id="invoicePdfLayoutUpload" type="file" accept="image/*" onchange="loadPdfLayoutImage('invoice',this)">
+          <div id="invoicePdfLayoutPreview" class="layout-preview" style="display:none"></div>
+          <button type="button" class="secondary remove-layout-button" id="invoiceRemovePdfLayout" onclick="removePdfLayoutImage('invoice')" style="display:none">Remove uploaded layout</button>
+        </div>
+      </div>
+      <div class="actions"><button id="invoiceSaveButton" class="primary" onclick="savePDF('invoice')">Save PDF</button><button class="secondary" onclick="newDocument('invoice')">New Proforma Invoice</button></div>
+    </section>
+
+    <section id="quotation" class="page">
+      <div class="card">
+        <div class="grid four">
+          <label>Quotation Number<input id="quotationNo" readonly></label>
+          <label>Date<input id="quotationDate" type="date" required></label>
+          <label>Customer Name<input id="quotationCustomer" required maxlength="150" autocomplete="name"></label>
+          <label>Phone Number<input id="quotationPhone" type="tel" inputmode="tel" maxlength="20" pattern="[+()0-9 .-]{7,20}" title="Enter a valid phone number (7–20 characters)."></label>
+        </div>
+        <div class="grid two">
+          <label>Address<textarea id="quotationAddress"></textarea></label>
+          <label>Sales Person Name<input id="quotationSales"></label>
+        </div>
+      </div>
+      <div class="card">
+        <div class="product-add">
+          <input id="quotationSearch" placeholder="Search product by name or code">
+          <select id="quotationProduct" onchange="syncSelectedPrice('quotation')"></select>
+          <input id="quotationPrice" class="selected-price" type="number" min="0" step="0.01" placeholder="Price / Discount Price">
+          <button class="primary" onclick="addLine('quotation')">+ Add Product</button>
+        </div>
+        <div id="quotationLines"></div>
+        <div id="quotationTotals" class="totals"></div>
+      </div>
+      <div class="card pdf-layout-choice">
+        <h2>PDF Layout</h2>
+        <label>Choose company layout
+          <select id="quotationPdfLayout" onchange="handlePdfLayoutChange('quotation')">
+            <option value="jimco">JIMCO EXIM — Default Layout</option>
+            <option value="prime">PRIME SOLUTIONS</option>
+            <option value="kannur">KANNUR SAFETY</option>
+          </select>
+        </label>
+        <p class="layout-help">Select the company layout before generating the PDF.</p>
+        <div class="custom-layout-upload">
+          <label for="quotationPdfLayoutUpload">Add another layout from gallery</label>
+          <input id="quotationPdfLayoutUpload" type="file" accept="image/*" onchange="loadPdfLayoutImage('quotation',this)">
+          <div id="quotationPdfLayoutPreview" class="layout-preview" style="display:none"></div>
+          <button type="button" class="secondary remove-layout-button" id="quotationRemovePdfLayout" onclick="removePdfLayoutImage('quotation')" style="display:none">Remove uploaded layout</button>
+        </div>
+      </div>
+      <div class="actions"><button id="quotationSaveButton" class="primary" onclick="savePDF('quotation')">Save PDF</button><button class="secondary" onclick="newDocument('quotation')">New Quotation</button></div>
+    </section>
+
+    <section id="products" class="page">
+      <div class="card">
+        <h2>Add Product</h2>
+        <div class="grid six">
+          <label>Product Name<input id="pName" required maxlength="120"></label>
+          <label>Product Code<input id="pCode" required maxlength="60"></label>
+          <label>Price<input id="pPrice" type="number" min="0" step="0.01" max="999999999999" required></label>
+          <label>Quantity<input id="pQty" type="number" min="0" max="1000000000" step="1" value="0" required></label>
+          <label>GST %<input id="pGst" type="number" min="0" max="100" step="0.01" value="18" required></label>
+          <label>Product Image<input id="pImage" type="file" accept="image/*"></label>
+        </div>
+        <div class="product-form-actions">
+          <button id="productSaveButton" class="primary" onclick="addProduct()">Add Product</button>
+          <button id="productCancelButton" class="secondary" onclick="cancelProductEdit()" style="display:none">Cancel Edit</button>
+        </div>
+        <span id="productFormStatus" class="form-status"></span>
+      </div>
+      <div class="card"><h2>Products</h2><input id="productSearch" class="search" placeholder="Search products..." oninput="renderProducts()"><div id="productList"></div></div>
+    </section>
+
+    <section id="files" class="page">
+      <div class="card">
+        <h2>Saved Invoices / Quotations</h2>
+        <p class="muted">Every newly saved document starts as <b>Pending</b>. Click the Pending button to move it to <b>Approved</b>.</p>
+        <div class="tabs">
+          <button onclick="renderFiles('all')">All</button>
+          <button onclick="renderFiles('pending')">Pending</button>
+          <button onclick="renderFiles('approved')">Approved</button>
+          <button onclick="renderFiles('invoice')">Proforma Invoices</button>
+          <button onclick="renderFiles('quotation')">Quotations</button>
+        </div>
+        <div id="fileList"></div>
+      </div>
+    </section>
+
+    <section id="settings" class="page">
+      <div class="card">
+        <h2>Company Details</h2>
+        <div class="grid two">
+          <label>Company Name<input id="sName" maxlength="150"></label><label>GSTIN<input id="sGst"></label>
+          <label>Phone<input id="sPhone" type="tel" inputmode="tel" maxlength="20"></label><label>Email<input id="sEmail" type="email" maxlength="254"></label>
+          <label>Website<input id="sWebsite"></label><label>Address<textarea id="sAddress"></textarea></label>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Bank Details</h2>
+        <div class="grid two">
+          <label>Bank Name<input id="sBank"></label><label>Account Name<input id="sAccountName"></label>
+          <label>Account Number<input id="sAccountNo"></label><label>IFSC<input id="sIfsc"></label>
+          <label>Branch<input id="sBranch"></label><label>UPI ID<input id="sUpi"></label>
+        </div>
+        <h2>Terms &amp; Conditions</h2>
+        <p class="settings-help">Enter each term on a separate line. Numbers are added automatically in the PDF.</p>
+        <textarea id="sTerms" class="settings-terms" rows="8" placeholder="Payment Terms: Immediate Payment
+Price: Indicates the cost of each item.
+Taxes: As shown above.
+Shipping Cost: Extra"></textarea>
+        <button class="primary" onclick="saveSettings()">Save Settings</button>
+        <span id="settingsStatus"></span>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="pdfArea" class="pdf-area"></div>
+<script src="app.js"></script>
+</body>
+</html>
