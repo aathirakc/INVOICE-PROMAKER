@@ -183,6 +183,14 @@
 </div>
 
 <div id="pdfArea" class="pdf-area"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+  // Supabase public client configuration. Access is restricted by Supabase RLS policies.
+  window.supabaseClient = window.supabase.createClient(
+    "https://zmrawetrwzqfqpvbqdsy.supabase.co",
+    "sb_publishable_Aq0VcLCi5Edt9sWaCe1Mbw_pU_9-0CI"
+  );
+</script>
 <script src="app.js"></script>
 </body>
 </html>
