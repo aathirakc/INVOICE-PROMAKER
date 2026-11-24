@@ -9,7 +9,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 <body>
-<div class="app">
+<div class="app">\n  <div id="supabase-account-bar" style="display:none"><span id="supabase-account-email"></span><button type="button" id="supabase-signout">Sign out</button></div>
   <aside class="sidebar">
     <div class="brand">Invoice<span>Pro</span></div>
     <button data-page="dashboard" class="nav active">Dashboard</button>
@@ -190,6 +190,70 @@
     "https://zmrawetrwzqfqpvbqdsy.supabase.co",
     "sb_publishable_Aq0VcLCi5Edt9sWaCe1Mbw_pU_9-0CI"
   );
+</script>
+
+<style>
+#supabase-login-overlay{position:fixed;inset:0;z-index:2000000;background:#f3f5f9;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial,sans-serif}
+#supabase-login-overlay .login-card{width:min(420px,100%);background:#fff;padding:28px;border-radius:14px;box-shadow:0 12px 40px #17203320}
+#supabase-login-overlay h2{margin:0 0 8px;color:#172033}
+#supabase-login-overlay p{color:#667085;line-height:1.5;font-size:14px}
+#supabase-login-overlay label{display:block;margin:16px 0 6px;font-weight:600;font-size:13px}
+#supabase-login-overlay input{box-sizing:border-box;width:100%;padding:12px;border:1px solid #ccd3dd;border-radius:8px;font-size:16px}
+#supabase-login-overlay button{width:100%;padding:13px;margin-top:18px;border:0;border-radius:8px;background:#2c1f91;color:white;font-weight:700;font-size:15px}
+#supabase-login-message{min-height:20px;color:#b42318;font-size:13px;margin-top:12px}
+#supabase-account-bar{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin:0 0 12px;font-size:12px;color:#667085}
+#supabase-account-bar button{border:1px solid #ccd3dd;background:#fff;border-radius:7px;padding:7px 10px}
+body.supabase-auth-checking .app{visibility:hidden}
+</style>
+<div id="supabase-login-overlay">
+ <form class="login-card" id="supabase-login-form">
+  <h2>InvoicePro Login</h2>
+  <p>Sign in with your existing Quotation Maker account to access your workspace.</p>
+  <label for="supabase-login-email">Email address</label>
+  <input id="supabase-login-email" type="email" autocomplete="username" required>
+  <label for="supabase-login-password">Password</label>
+  <input id="supabase-login-password" type="password" autocomplete="current-password" required>
+  <button id="supabase-login-button" type="submit">Sign In</button>
+  <div id="supabase-login-message" role="status"></div>
+ </form>
+</div>
+
+<script>
+(function(){
+ document.body.classList.add("supabase-auth-checking");
+ const overlay=document.getElementById("supabase-login-overlay");
+ const form=document.getElementById("supabase-login-form");
+ const message=document.getElementById("supabase-login-message");
+ const button=document.getElementById("supabase-login-button");
+ const accountBar=document.getElementById("supabase-account-bar");
+ const emailLabel=document.getElementById("supabase-account-email");
+ function showLogin(){overlay.style.display="flex";accountBar.style.display="none";document.body.classList.remove("supabase-auth-checking");}
+ function showApp(user){overlay.style.display="none";accountBar.style.display="flex";emailLabel.textContent=user.email||"Signed in";document.body.classList.remove("supabase-auth-checking");}
+ async function init(){
+  if(!window.supabaseClient){message.textContent="Secure sign-in could not load. Refresh the page and try again.";showLogin();return;}
+  const {data,error}=await window.supabaseClient.auth.getSession();
+  if(error){message.textContent=error.message;showLogin();return;}
+  if(data.session)showApp(data.session.user);else showLogin();
+  window.supabaseClient.auth.onAuthStateChange((_event,session)=>{if(session)showApp(session.user);else showLogin();});
+ }
+ form.addEventListener("submit",async function(event){
+  event.preventDefault();message.textContent="";button.disabled=true;button.textContent="Signing in…";
+  try{
+   const email=document.getElementById("supabase-login-email").value.trim();
+   const password=document.getElementById("supabase-login-password").value;
+   const {data,error}=await window.supabaseClient.auth.signInWithPassword({email,password});
+   if(error)throw error;
+   showApp(data.user);
+   document.getElementById("supabase-login-password").value="";
+  }catch(error){message.textContent=error.message||"Sign in failed. Check your email and password.";}
+  finally{button.disabled=false;button.textContent="Sign In";}
+ });
+ document.getElementById("supabase-signout").addEventListener("click",async function(){
+  const {error}=await window.supabaseClient.auth.signOut();
+  if(error)alert("Could not sign out: "+error.message);
+ });
+ init().catch(error=>{message.textContent=error.message||"Could not check your login.";showLogin();});
+})();
 </script>
 <script src="app.js"></script>
 </body>
